@@ -374,7 +374,7 @@ RUN rpm-ostree install \
         libXinerama.i686 \
         libXtst.i686 \
         libXScrnSaver.i686 \
-        NetworkManager-libnm.i686 \
+        https://kojipkgs.fedoraproject.org//packages/NetworkManager/1.46.0/2.fc40/i686/NetworkManager-libnm-1.46.0-2.fc40.i686.rpm \
         nss.i686 \
         pulseaudio-libs.i686 \
         libcurl.i686 \
@@ -788,7 +788,7 @@ RUN /usr/libexec/containerbuild/image-info && \
     systemctl disable batterylimit.service && \
     ostree container commit
 
-FROM ghcr.io/ublue-os/akmods-nvidia:${KERNEL_FLAVOR}-${FEDORA_MAJOR_VERSION} AS nvidia-akmods
+FROM ghcr.io/ublue-os/akmods-nvidia:${KERNEL_FLAVOR}-${FEDORA_MAJOR_VERSION}-20240716 AS nvidia-akmods
 
 FROM bazzite AS bazzite-nvidia
 
@@ -821,6 +821,7 @@ RUN curl -Lo /tmp/nvidia-install.sh https://raw.githubusercontent.com/ublue-os/h
     chmod +x /tmp/nvidia-install.sh && \
     IMAGE_NAME="${BASE_IMAGE_NAME}" /tmp/nvidia-install.sh && \
     rm -f /usr/share/vulkan/icd.d/nouveau_icd.*.json && \
+    ln -s libnvidia-ml.so.1 /usr/lib64/libnvidia-ml.so && \
     ostree container commit
 
 # Cleanup & Finalize
