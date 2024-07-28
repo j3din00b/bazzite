@@ -8,7 +8,6 @@ ARG BASE_IMAGE="ghcr.io/ublue-os/${SOURCE_IMAGE}"
 ARG FEDORA_MAJOR_VERSION="${FEDORA_MAJOR_VERSION:-40}"
 ARG JUPITER_KERNEL_VERSION="${JUPITER_KERNEL_VERSION:-jupiter-20240605.1}"
 ARG SHA_HEAD_SHORT="${SHA_HEAD_SHORT}"
-ARG CODE_NAME="${CODE_NAME:-Holographic}"
 
 FROM ghcr.io/ublue-os/akmods:${KERNEL_FLAVOR}-${FEDORA_MAJOR_VERSION} AS akmods
 FROM ghcr.io/ublue-os/akmods-extra:${KERNEL_FLAVOR}-${FEDORA_MAJOR_VERSION} AS akmods-extra
@@ -25,7 +24,6 @@ ARG BASE_IMAGE_NAME="${BASE_IMAGE_NAME:-kinoite}"
 ARG FEDORA_MAJOR_VERSION="${FEDORA_MAJOR_VERSION:-40}"
 ARG JUPITER_KERNEL_VERSION="${JUPITER_KERNEL_VERSION:-jupiter-20240605.1}"
 ARG SHA_HEAD_SHORT="${SHA_HEAD_SHORT}"
-ARG CODE_NAME="${CODE_NAME:-Holographic}"
 
 COPY system_files/desktop/shared system_files/desktop/${BASE_IMAGE_NAME} /
 
@@ -135,6 +133,16 @@ RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
     --from repo=updates \
         fontconfig \
         || true && \
+    rpm-ostree override replace \
+    --experimental \
+    --from repo=updates \
+        pciutils-libs \
+        || true && \
+    rpm-ostree override replace \
+    --experimental \
+    --from repo=updates \
+        libdrm \
+        || true && \
     rpm-ostree override remove \
         glibc32 \
         || true && \
@@ -154,7 +162,6 @@ RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
     curl -Lo /etc/yum.repos.d/_copr_kylegospo-wallpaper-engine-kde-plugin.repo https://copr.fedorainfracloud.org/coprs/kylegospo/wallpaper-engine-kde-plugin/repo/fedora-"${FEDORA_MAJOR_VERSION}"/kylegospo-wallpaper-engine-kde-plugin-fedora-"${FEDORA_MAJOR_VERSION}".repo && \
     curl -Lo /etc/yum.repos.d/_copr_ycollet-audinux.repo https://copr.fedorainfracloud.org/coprs/ycollet/audinux/repo/fedora-"${FEDORA_MAJOR_VERSION}"/ycollet-audinux-fedora-"${FEDORA_MAJOR_VERSION}".repo && \
     curl -Lo /etc/yum.repos.d/_copr_kylegospo-rom-properties.repo https://copr.fedorainfracloud.org/coprs/kylegospo/rom-properties/repo/fedora-"${FEDORA_MAJOR_VERSION}"/kylegospo-rom-properties-fedora-"${FEDORA_MAJOR_VERSION}".repo && \
-    curl -Lo /etc/yum.repos.d/_copr_kylegospo-joycond.repo https://copr.fedorainfracloud.org/coprs/kylegospo/joycond/repo/fedora-"${FEDORA_MAJOR_VERSION}"/kylegospo-joycond-fedora-"${FEDORA_MAJOR_VERSION}".repo && \
     curl -Lo /etc/yum.repos.d/_copr_kylegospo-webapp-manager.repo https://copr.fedorainfracloud.org/coprs/kylegospo/webapp-manager/repo/fedora-"${FEDORA_MAJOR_VERSION}"/kylegospo-webapp-manager-fedora-"${FEDORA_MAJOR_VERSION}".repo && \
     curl -Lo /etc/yum.repos.d/_copr_hhd-dev-hhd.repo https://copr.fedorainfracloud.org/coprs/hhd-dev/hhd/repo/fedora-"${FEDORA_MAJOR_VERSION}"/hhd-dev-hhd-fedora-"${FEDORA_MAJOR_VERSION}".repo && \
     curl -Lo /etc/yum.repos.d/_copr_che-nerd-fonts.repo https://copr.fedorainfracloud.org/coprs/che/nerd-fonts/repo/fedora-"${FEDORA_MAJOR_VERSION}"/che-nerd-fonts-fedora-"${FEDORA_MAJOR_VERSION}".repo && \
@@ -252,6 +259,13 @@ RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
         /tmp/akmods-extra-rpms/kmods/*bmi260*.rpm \
         /tmp/akmods-extra-rpms/kmods/*ryzen-smu*.rpm && \
     sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/negativo17-fedora-multimedia.repo && \
+    rpm-ostree override replace \
+        --experimental \
+        --from repo=copr:copr.fedorainfracloud.org:ublue-os:staging \
+            fwupd \
+            fwupd-plugin-flashrom \
+            fwupd-plugin-modem-manager \
+            fwupd-plugin-uefi-capsule-data && \
     /usr/libexec/containerbuild/cleanup.sh && \
     ostree container commit
 
@@ -322,7 +336,6 @@ RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
         input-remapper \
         i2c-tools \
         udica \
-        joycond \
         ladspa-caps-plugins \
         ladspa-noise-suppression-for-voice \
         python3-icoextract \
@@ -360,9 +373,10 @@ RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
         cockpit-system \
         cockpit-navigator \
         cockpit-storaged \
+        topgrade \
         ydotool \
+        yafti \
         lsb_release && \
-    pip install --prefix=/usr topgrade && \
     rpm-ostree install \
         ublue-update && \
     mkdir -p /usr/etc/xdg/autostart && \
@@ -427,6 +441,7 @@ RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
     sed -i '0,/enabled=0/s//enabled=1/' /etc/yum.repos.d/fedora-updates.repo && \
     rpm-ostree install \
         lutris \
+        umu-launcher \
         wine-core.x86_64 \
         wine-core.i686 \
         wine-pulseaudio.x86_64 \
@@ -443,10 +458,10 @@ RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
         libobs_vkcapture.i686 \
         libobs_glcapture.i686 \
         mangohud.x86_64 \
-        mangohud.i686 && \    
-        ln -s wine32 /usr/bin/wine && \
-	ln -s wine32-preloader /usr/bin/wine-preloader && \
-	ln -s wineserver64 /usr/bin/wineserver && \
+        mangohud.i686 && \
+    ln -s wine32 /usr/bin/wine && \
+    ln -s wine32-preloader /usr/bin/wine-preloader && \
+    ln -s wineserver64 /usr/bin/wineserver && \
     sed -i 's@\[Desktop Entry\]@\[Desktop Entry\]\nNoDisplay=true@g' /usr/share/applications/winetricks.desktop && \
     curl -Lo /tmp/latencyflex.tar.xz $(curl https://api.github.com/repos/ishitatsuyuki/LatencyFleX/releases/latest | jq -r '.assets[] | select(.name| test(".*.tar.xz$")).browser_download_url') && \
     mkdir -p /tmp/latencyflex && \
@@ -488,6 +503,7 @@ RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
             joystickwake \
             fcitx5-mozc \
             fcitx5-chinese-addons \
+            fcitx5-hangul \
             ptyxis && \
         git clone https://github.com/catsout/wallpaper-engine-kde-plugin.git --depth 1 --branch qt6 /tmp/wallpaper-engine-kde-plugin && \
         kpackagetool6 --type=Plasma/Wallpaper --global --install /tmp/wallpaper-engine-kde-plugin/plugin && \
@@ -499,7 +515,6 @@ RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
         sed -i 's@Keywords=@Keywords=konsole;console;@g' /usr/share/applications/org.gnome.Ptyxis.desktop && \
         cp /usr/share/applications/org.gnome.Ptyxis.desktop /usr/share/kglobalaccel/org.gnome.Ptyxis.desktop && \
         sed -i 's@\[Desktop Entry\]@\[Desktop Entry\]\nNoDisplay=true@g' /usr/share/applications/org.kde.konsole.desktop && \
-        sed -i 's@\[Desktop Entry\]@\[Desktop Entry\]\nNoDisplay=true@g' /usr/share/applications/yad-icon-browser.desktop && \
         rm -f /usr/share/kglobalaccel/org.kde.konsole.desktop && \
         systemctl enable kde-sysmonitor-workaround.service \
     ; else \
@@ -586,6 +601,7 @@ RUN rm -f /etc/profile.d/toolbox.sh && \
     sed -i 's@\[Desktop Entry\]@\[Desktop Entry\]\nNoDisplay=true@g' /usr/share/applications/fish.desktop && \
     sed -i 's@\[Desktop Entry\]@\[Desktop Entry\]\nNoDisplay=true@g' /usr/share/applications/nvtop.desktop && \
     sed -i 's@\[Desktop Entry\]@\[Desktop Entry\]\nNoDisplay=true@g' /usr/share/applications/btop.desktop && \
+    sed -i 's@\[Desktop Entry\]@\[Desktop Entry\]\nNoDisplay=true@g' /usr/share/applications/yad-icon-browser.desktop && \
     sed -i 's/#UserspaceHID.*/UserspaceHID=true/' /etc/bluetooth/input.conf && \
     rm -f /usr/share/vulkan/icd.d/lvp_icd.*.json && \
     mkdir -p "/usr/etc/profile.d/" && \
@@ -607,7 +623,6 @@ RUN rm -f /etc/profile.d/toolbox.sh && \
     echo "import \"/usr/share/ublue-os/just/84-bazzite-virt.just\"" >> /usr/share/ublue-os/justfile && \
     echo "import \"/usr/share/ublue-os/just/85-bazzite-image.just\"" >> /usr/share/ublue-os/justfile && \
     echo "import \"/usr/share/ublue-os/just/90-bazzite-de.just\"" >> /usr/share/ublue-os/justfile && \
-    pip install --prefix=/usr yafti && \
     sed -i 's/stage/none/g' /etc/rpm-ostreed.conf && \
     sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/_copr_ublue-os-akmods.repo && \
     sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/_copr_kylegospo-bazzite.repo && \
@@ -619,7 +634,6 @@ RUN rm -f /etc/profile.d/toolbox.sh && \
     sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/_copr_kylegospo-wallpaper-engine-kde-plugin.repo && \
     sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/_copr_ycollet-audinux.repo && \
     sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/_copr_kylegospo-rom-properties.repo && \
-    sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/_copr_kylegospo-joycond.repo && \
     sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/_copr_kylegospo-webapp-manager.repo && \
     sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/_copr_hhd-dev-hhd.repo && \
     sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/_copr_che-nerd-fonts.repo && \
@@ -650,30 +664,9 @@ RUN rm -f /etc/profile.d/toolbox.sh && \
     systemctl enable bazzite-hardware-setup.service && \
     systemctl enable tailscaled.service && \
     systemctl enable dev-hugepages1G.mount && \
-    systemctl disable joycond.service && \
     systemctl --global enable bazzite-user-setup.service && \
     systemctl --global enable podman.socket && \
     systemctl --global enable systemd-tmpfiles-setup.service && \
-    if grep -q "kinoite" <<< "${BASE_IMAGE_NAME}"; then \
-        sed -i '/^PRETTY_NAME/s/Kinoite/From Fedora Kinoite/' /usr/lib/os-release \
-    ; else \
-        sed -i 's@\[Desktop Entry\]@\[Desktop Entry\]\nNoDisplay=true@g' /usr/share/applications/yad-icon-browser.desktop && \
-        sed -i '/^PRETTY_NAME/s/Silverblue/From Fedora Silverblue/' /usr/lib/os-release \
-    ; fi && \
-    sed -i '/^PRETTY_NAME/s/Fedora Linux/Bazzite/' /usr/lib/os-release &&\
-    sed -i 's/^NAME=.*/NAME="Bazzite"/' /usr/lib/os-release && \
-    sed -i 's|^HOME_URL=.*|HOME_URL="https://bazzite.gg"|' /usr/lib/os-release && \
-    sed -i 's|^DOCUMENTATION_URL=.*|DOCUMENTATION_URL="https://docs.bazzite.gg"|' /usr/lib/os-release && \
-    sed -i 's|^SUPPORT_URL=.*|SUPPORT_URL="https://discord.bazzite.gg"|' /usr/lib/os-release && \
-    sed -i 's|^BUG_REPORT_URL=.*|BUG_REPORT_URL="https://github.com/ublue-os/bazzite/issues/"|' /usr/lib/os-release && \
-    sed -i 's|^CPE_NAME="cpe:/o:fedoraproject:fedora|CPE_NAME="cpe:/o:universal-blue:bazzite|' /usr/lib/os-release && \
-    sed -i 's/^DEFAULT_HOSTNAME=.*/DEFAULT_HOSTNAME="bazzite"/' /usr/lib/os-release && \
-    sed -i 's/^ID=.*/ID=bazzite\nID_LIKE="rhel centos fedora"/' /usr/lib/os-release && \
-    sed -i 's/^LOGO=.*/LOGO=bazzite-logo-icon/' /usr/lib/os-release && \
-    sed -i 's/^ANSI_COLOR=.*/ANSI_COLOR="0;38;2;138;43;226"/' /usr/lib/os-release && \
-    sed -i '/^REDHAT_BUGZILLA_PRODUCT=/d; /^REDHAT_BUGZILLA_PRODUCT_VERSION=/d; /^REDHAT_SUPPORT_PRODUCT=/d; /^REDHAT_SUPPORT_PRODUCT_VERSION=/d' /usr/lib/os-release && \
-    echo "VERSION_CODENAME=\"$CODE_NAME\"" >> /usr/lib/os-release && \
-    echo "BUILD_ID=\"$SHA_HEAD_SHORT\"" >> /usr/lib/os-release && \
     systemctl disable waydroid-container.service && \
     curl -Lo /usr/etc/dxvk-example.conf https://raw.githubusercontent.com/doitsujin/dxvk/master/dxvk.conf && \
     curl -Lo /usr/bin/waydroid-choose-gpu https://raw.githubusercontent.com/KyleGospo/waydroid-scripts/main/waydroid-choose-gpu.sh && \
@@ -694,7 +687,6 @@ ARG KERNEL_FLAVOR="${KERNEL_FLAVOR:-fsync}"
 ARG IMAGE_BRANCH="${IMAGE_BRANCH:-main}"
 ARG BASE_IMAGE_NAME="${BASE_IMAGE_NAME:-kinoite}"
 ARG FEDORA_MAJOR_VERSION="${FEDORA_MAJOR_VERSION:-40}"
-ARG STEAM_PACKAGE_VERSION="${STEAM_PACKAGE_VERSION:-steam-jupiter-stable-1.0.0.79-1-x86_64}"
 
 COPY system_files/deck/shared system_files/deck/${BASE_IMAGE_NAME} /
 
@@ -777,12 +769,10 @@ RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
     ostree container commit
 
 # Install Gamescope Session & Supporting changes
-# Add bootstraplinux_ubuntu12_32.tar.xz used by gamescope-session (Thanks ChimeraOS! - https://chimeraos.org/)
+# Add bootstrap_steam.tar.gz used by gamescope-session (Thanks GE & Nobara Project!)
 RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
-    curl -Lo /tmp/steam-jupiter.pkg.tar.zst https://steamdeck-packages.steamos.cloud/archlinux-mirror/jupiter-main/os/x86_64/"${STEAM_PACKAGE_VERSION}".pkg.tar.zst && \
-    mkdir -p /usr/etc/first-boot && \
-    tar --no-same-owner --no-same-permissions --no-overwrite-dir -I zstd -xvf /tmp/steam-jupiter.pkg.tar.zst usr/lib/steam/bootstraplinux_ubuntu12_32.tar.xz -o > /usr/etc/first-boot/bootstraplinux_ubuntu12_32.tar.xz && \
-    rm -f /tmp/steam-jupiter.pkg.tar.zst && \
+    mkdir -p /usr/share/gamescope-session-plus/ && \
+    curl -Lo /usr/share/gamescope-session-plus/bootstrap_steam.tar.gz https://large-package-sources.nobaraproject.org/bootstrap_steam.tar.gz && \
     rpm-ostree install \
         gamescope-session-plus \
         gamescope-session-steam && \
