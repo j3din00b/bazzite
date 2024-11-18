@@ -6,7 +6,7 @@
 
 Name:           gamescope
 Version:        100.%{gamescope_tag}
-Release:        8.bazzite
+Release:        14.bazzite
 Summary:        Micro-compositor for video games on Wayland
 
 License:        BSD
@@ -17,9 +17,9 @@ Source0:        stb.pc
 
 Patch0:         0001-cstdint.patch
 
+# https://hhd.dev/
 # https://github.com/ChimeraOS/gamescope
-# Cleaned up by + patches from https://hhd.dev/
-Patch1:         chimeraos-cleanup-v1.patch
+Patch1:         handheld.patch
 
 # https://github.com/ValveSoftware/gamescope/pull/740
 Patch2:         740.patch
@@ -55,8 +55,8 @@ BuildRequires:  pkgconfig(xkbcommon)
 BuildRequires:  pkgconfig(sdl2)
 BuildRequires:  pkgconfig(libpipewire-0.3)
 BuildRequires:  pkgconfig(libavif)
-BuildRequires:  (pkgconfig(wlroots) >= 0.18.0 with pkgconfig(wlroots) < 0.19.0)
-BuildRequires:  (pkgconfig(libliftoff) >= 0.4.1 with pkgconfig(libliftoff) < 0.5)
+BuildRequires:  pkgconfig(wlroots)
+BuildRequires:  pkgconfig(libliftoff)
 BuildRequires:  pkgconfig(libcap)
 BuildRequires:  pkgconfig(hwdata)
 BuildRequires:  pkgconfig(lcms2)
@@ -99,6 +99,7 @@ Summary:	libs for %{name}
 # git clone --depth 1 --branch %%{gamescope_tag} %%{url}.git
 git clone --depth 1 --branch master %{url}.git
 cd gamescope
+git checkout 7dd1bcd9102a17e039970ccd9a324a9fe8365d6d
 git submodule update --init --recursive
 mkdir -p pkgconfig
 cp %{SOURCE0} pkgconfig/stb.pc
